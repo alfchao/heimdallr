@@ -38,7 +38,7 @@ class Telegram(Channel):
         self.token = get_config_str(self.get_name(), SUFFIX_TELEGRAM_TOKEN, "")
         self.chat_id = get_config_str(self.get_name(), SUFFIX_TELEGRAM_CHAT_ID, "")
         self.base_url = get_config_str(
-            self.get_name(),
+            "TELEGRAM",
             SUFFIX_TELEGRAM_BASE_URL,
             "https://api.telegram.org/bot",
         )
