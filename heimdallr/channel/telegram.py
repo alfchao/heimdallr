@@ -5,8 +5,15 @@ import requests
 
 from heimdallr.channel.base import Channel, Message
 from heimdallr.config.config import get_config_str
-from heimdallr.config.definition import SUFFIX_TELEGRAM_CHAT_ID, SUFFIX_TELEGRAM_TOKEN
+from heimdallr.config.definition import (
+    SUFFIX_TELEGRAM_BASE_URL,
+    SUFFIX_TELEGRAM_CHAT_ID,
+    SUFFIX_TELEGRAM_TOKEN,
+)
 from heimdallr.exception import ParamException
+
+TELEGRAM_BASE_URL_DEFAULT = "https://api.telegram.org"
+TELEGRAM_BOT_PATH = "/bot"
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +32,7 @@ class TelegramMessage(Message):
 class Telegram(Channel):
     def __init__(self, name: str, type: str):
         super().__init__(name, type)
-        self.base_url = "https://api.telegram.org/bot"
+        self.base_url: str
         self.token: str
         self.chat_id: str
         self._build_channel()
@@ -33,6 +40,11 @@ class Telegram(Channel):
     def _build_channel(self) -> None:
         self.token = get_config_str(self.get_name(), SUFFIX_TELEGRAM_TOKEN, "")
         self.chat_id = get_config_str(self.get_name(), SUFFIX_TELEGRAM_CHAT_ID, "")
+        self.base_url = get_config_str(
+            "TELEGRAM",
+            SUFFIX_TELEGRAM_BASE_URL,
+            TELEGRAM_BASE_URL_DEFAULT,
+        )
         if not self.token or not self.chat_id:
             raise ParamException("Telegram token or chat id is empty.")
 
@@ -42,7 +54,7 @@ class Telegram(Channel):
         msg = message.render_message()
         # add chat id
         msg["chat_id"] = self.chat_id
-        url = f"{self.base_url}{self.token}/sendMessage"
+        url = f"{self.base_url}{TELEGRAM_BOT_PATH}{self.token}/sendMessage"
         rs = requests.post(url, json=msg)
         if rs.status_code != 200:
             logger.error(f"Telegram send failed: {rs.text}")
