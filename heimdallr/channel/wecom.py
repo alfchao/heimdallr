@@ -77,7 +77,7 @@ class WecomWebhook(Channel):
     def _build_channel(self) -> None:
         self.key = get_config_str(self.get_name(), SUFFIX_WECOM_KEY, "")
         self.base_url = get_config_str(
-            self.get_name(),
+            "WECOM",
             SUFFIX_WECOM_WEBHOOK_BASE_URL,
             "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=",
         )
@@ -116,12 +116,12 @@ class WecomApp(Channel):
         self.secret = get_config_str(self.get_name(), SUFFIX_WECOM_SECRET, "")
         self.agent_id = int(get_config_str(self.get_name(), SUFFIX_WECOM_AGENT_ID, ""))
         self.base_url = get_config_str(
-            self.get_name(),
+            "WECOM",
             SUFFIX_WECOM_APP_BASE_URL,
             "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=",
         )
         self.auth_base_url = get_config_str(
-            self.get_name(),
+            "WECOM",
             SUFFIX_WECOM_AUTH_BASE_URL,
             "https://qyapi.weixin.qq.com/cgi-bin/gettoken",
         )
