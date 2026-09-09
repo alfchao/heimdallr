@@ -8,10 +8,16 @@ from heimdallr.channel.base import Channel, Message
 from heimdallr.config.config import get_config_str
 from heimdallr.config.definition import (
     SUFFIX_WECOM_AGENT_ID,
+    SUFFIX_WECOM_BASE_URL,
     SUFFIX_WECOM_CORP_ID,
     SUFFIX_WECOM_KEY,
     SUFFIX_WECOM_SECRET,
 )
+
+WECOM_BASE_URL_DEFAULT = "https://qyapi.weixin.qq.com"
+WECOM_WEBHOOK_PATH = "/cgi-bin/webhook/send?key="
+WECOM_APP_SEND_PATH = "/cgi-bin/message/send?access_token="
+WECOM_AUTH_PATH = "/cgi-bin/gettoken"
 from heimdallr.exception import WecomException
 
 logger = logging.getLogger(__name__)
@@ -67,19 +73,24 @@ class WecomAppMessage(Message):
 class WecomWebhook(Channel):
     def __init__(self, name: str, type: str):
         super().__init__(name, type)
-        self.base_url: str = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="
+        self.base_url: str
         self.key: str = ""
         self._build_channel()
 
     def _build_channel(self) -> None:
         self.key = get_config_str(self.get_name(), SUFFIX_WECOM_KEY, "")
+        self.base_url = get_config_str(
+            "WECOM",
+            SUFFIX_WECOM_BASE_URL,
+            WECOM_BASE_URL_DEFAULT,
+        )
         if self.key == "":
             raise WecomException("WecomWebhook key not set")
 
     def send(self, message: Message):
         if not isinstance(message, WecomWebhookMessage):
             raise WecomException("Invalid message type")
-        url = f"{self.base_url}{self.key}"
+        url = f"{self.base_url}{WECOM_WEBHOOK_PATH}{self.key}"
         rs = requests.post(
             url,
             data=message.render_message(),
@@ -95,7 +106,7 @@ class WecomWebhook(Channel):
 class WecomApp(Channel):
     def __init__(self, name: str, type: str):
         super().__init__(name, type)
-        self.base_url: str = "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token="
+        self.base_url: str
         self.corp_id: str
         self.secret: str
         self.access_token: str
@@ -106,6 +117,11 @@ class WecomApp(Channel):
         self.corp_id = get_config_str(self.get_name(), SUFFIX_WECOM_CORP_ID, "")
         self.secret = get_config_str(self.get_name(), SUFFIX_WECOM_SECRET, "")
         self.agent_id = int(get_config_str(self.get_name(), SUFFIX_WECOM_AGENT_ID, ""))
+        self.base_url = get_config_str(
+            "WECOM",
+            SUFFIX_WECOM_BASE_URL,
+            WECOM_BASE_URL_DEFAULT,
+        )
 
         if self.corp_id == "" or self.secret == "":
             raise WecomException("corp id or secret not set")
@@ -114,7 +130,7 @@ class WecomApp(Channel):
         if not isinstance(message, WecomAppMessage):
             raise WecomException("Invalid message type")
         # get access token
-        auth_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={self.corp_id}&corpsecret={self.secret}"
+        auth_url = f"{self.base_url}{WECOM_AUTH_PATH}?corpid={self.corp_id}&corpsecret={self.secret}"
         rs = requests.get(auth_url, timeout=5).json()
         if rs["errcode"] == 0:
             self.access_token = rs["access_token"]
@@ -123,7 +139,7 @@ class WecomApp(Channel):
         # patch up message
         message.agent_id = self.agent_id
         msg = message.render_message()
-        url = f"{self.base_url}{self.access_token}"
+        url = f"{self.base_url}{WECOM_APP_SEND_PATH}{self.access_token}"
         rs = requests.post(
             url,
             data=msg,
